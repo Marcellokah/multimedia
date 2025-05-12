@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="hu">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CrashDown</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #222;
+            color: white;
+            text-align: center;
+            margin: 0;
+        }
+
+        h1 {
+            margin: 10px;
+        }
+
+        #game {
+            display: grid;
+            grid-template-columns: repeat(10, 40px);
+            grid-template-rows: repeat(10, 40px);
+            gap: 2px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .block {
+            width: 40px;
+            height: 40px;
+            background: gray;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .red {
+            background: #e74c3c;
+        }
+
+        .green {
+            background: #2ecc71;
+        }
+
+        .blue {
+            background: #3498db;
+        }
+
+        .yellow {
+            background: #f1c40f;
+        }
+
+        .hidden {
+            visibility: hidden;
+            transform: scale(0);
+        }
+
+        #score,
+        #timer,
+        #clicks {
+            margin: 10px;
+        }
+
+        #leaderboard {
+            margin-top: 20px;
+        }
+
+        #next-row {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .preview-block {
+            width: 40px;
+            height: 40px;
+            margin: 0 1px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>CrashDown</h1>
+    <div id="score">Pontszám: 0</div>
+    <div id="timer">Idő: 0s</div>
+    <div id="clicks">Kattintások hátralévő száma: 6</div>
+    <div id="game"></div>
+    <div id="next-row"></div>
+    <div id="leaderboard"></div>
+
+    <audio id="bgm" loop autoplay
+        src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_0c4908268b.mp3?filename=arcade-funk-113130.mp3"></audio>
+    <audio id="clickSound"
+        src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_9257d7ab3f.mp3?filename=click-124467.mp3"></audio>
+
+    <script>
+        const game = document.getElementById('game');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const clicksDisplay = document.getElementById('clicks');
+        const leaderboardDisplay = document.getElementById('leaderboard');
+        const nextRowDisplay = document.getElementById('next-row');
+        const clickSound = document.getElementById('clickSound');
+
+        const colors = ['red', 'green', 'blue', 'yellow'];
+        const rows = 10;
+        const cols = 10;
+        let activeRows = 3;
+        let score = 0;
+        let time = 0;
+        let interval;
+        let clicks = 6;
+
+        const grid = [];
+
+        function createGrid() {
+            game.innerHTML = '';
+            grid.length = 0;
+            for (let r = 0; r < rows; r++) {
+                grid[r] = [];
+                for (let c = 0; c < cols; c++) {
+                    const div = document.createElement('div');
+                    div.classList.add('block');
+                    div.classList.add(r >= rows - activeRows ? colors[Math.floor(Math.random() * colors.length)] : 'hidden');
+                    div.dataset.row = r;
+                    div.dataset.col = c;
+                    div.addEventListener('click', onClick);
+                    game.appendChild(div);
+                    grid[r][c] = div;
+                }
+            }
+            renderNextRow();
+        }
+
+        function renderNextRow() {
+            nextRowDisplay.innerHTML = '';
+            nextRowColors = [];
+            for (let i = 0; i < cols; i++) {
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                nextRowColors.push(color);
+                const div = document.createElement('div');
+                div.classList.add('preview-block', color);
+                nextRowDisplay.appendChild(div);
+            }
+        }
+
+        function onClick(e) {
+            if (clicks <= 0) return;
+            const div = e.target;
+            const row = parseInt(div.dataset.row);
+            const col = parseInt(div.dataset.col);
+            const color = div.classList[1];
+            const toRemove = [];
+
+            floodFill(row, col, color, toRemove);
+
+            if (toRemove.length > 1) {
+                clickSound.play();
+                toRemove.forEach(el => {
+                    el.classList.add('hidden');
+                    el.removeEventListener('click', onClick);
+                });
+                score += toRemove.length;
+                scoreDisplay.textContent = `Pontszám: ${score}`;
+                clicks--;
+                clicksDisplay.textContent = `Kattintások hátralévő száma: ${clicks}`;
+                applyGravity();
+                if (clicks === 0) {
+                    addRow();
+                    clicks = 6;
+                    clicksDisplay.textContent = `Kattintások hátralévő száma: ${clicks}`;
+                }
+            }
+        }
+
+        function floodFill(r, c, color, found) {
+            if (r < 0 || c < 0 || r >= rows || c >= cols) return;
+            const block = grid[r][c];
+            if (!block || block.classList.contains('hidden') || block.classList[1] !== color || found.includes(block)) return;
+            found.push(block);
+            floodFill(r + 1, c, color, found);
+            floodFill(r - 1, c, color, found);
+            floodFill(r, c + 1, color, found);
+            floodFill(r, c - 1, color, found);
+        }
+
+        function applyGravity() {
+            for (let c = 0; c < cols; c++) {
+                for (let r = rows - 1; r >= 0; r--) {
+                    if (grid[r][c].classList.contains('hidden')) {
+                        for (let k = r - 1; k >= 0; k--) {
+                            if (!grid[k][c].classList.contains('hidden')) {
+                                grid[r][c].className = grid[k][c].className;
+                                grid[k][c].className = 'block hidden';
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            centerColumns();
+        }
+
+        function centerColumns() {
+            let columns = [];
+            for (let c = 0; c < cols; c++) {
+                let hasBlock = false;
+                for (let r = 0; r < rows; r++) {
+                    if (!grid[r][c].classList.contains('hidden')) {
+                        hasBlock = true;
+                        break;
+                    }
+                }
+                if (hasBlock) columns.push(c);
+            }
+
+            const emptyCols = cols - columns.length;
+            const leftPadding = Math.floor(emptyCols / 2);
+
+            const newGrid = Array.from({ length: rows }, () => Array(cols).fill(null));
+
+            for (let r = 0; r < rows; r++) {
+                for (let i = 0; i < columns.length; i++) {
+                    const c = columns[i];
+                    const block = grid[r][c];
+                    newGrid[r][i + leftPadding] = block;
+                }
+            }
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const block = newGrid[r][c];
+                    if (block) {
+                        block.dataset.row = r;
+                        block.dataset.col = c;
+                        game.appendChild(block);
+                        grid[r][c] = block;
+                    } else {
+                        const empty = document.createElement('div');
+                        empty.className = 'block hidden';
+                        empty.dataset.row = r;
+                        empty.dataset.col = c;
+                        empty.addEventListener('click', onClick);
+                        game.appendChild(empty);
+                        grid[r][c] = empty;
+                    }
+                }
+            }
+        }
+
+        function addRow() {
+            if (activeRows >= rows) {
+                stopTimer();
+                alert("Játék vége! Elérted a maximális sorokat.");
+                saveScore();
+                return;
+            }
+
+            for (let r = 0; r < rows - 1; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const current = grid[r][c];
+                    const below = grid[r + 1][c];
+                    current.className = below.className;
+                }
+            }
+
+            for (let c = 0; c < cols; c++) {
+                const color = nextRowColors[c];
+                const block = grid[rows - 1][c];
+                block.className = `block ${color}`;
+            }
+
+            activeRows++;
+            renderNextRow();
+        }
+
+        function startTimer() {
+            interval = setInterval(() => {
+                time++;
+                timerDisplay.textContent = `Idő: ${time}s`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(interval);
+        }
+
+        function saveScore() {
+            const name = prompt("Add meg a neved a toplistához:");
+            if (!name) return;
+            const leaderboard = JSON.parse(localStorage.getItem('leaderboard') || '[]');
+            leaderboard.push({ name, score });
+            leaderboard.sort((a, b) => b.score - a.score);
+            localStorage.setItem('leaderboard', JSON.stringify(leaderboard.slice(0, 5)));
+            showLeaderboard();
+        }
+
+        function showLeaderboard() {
+            const leaderboard = JSON.parse(localStorage.getItem('leaderboard') || '[]');
+            leaderboardDisplay.innerHTML = '<h3>Toplista</h3>' +
+                leaderboard.map(entry => `<div>${entry.name}: ${entry.score} pont</div>`).join('');
+        }
+
+        window.addEventListener('beforeunload', stopTimer);
+
+        let nextRowColors = [];
+
+        createGrid();
+        startTimer();
+        showLeaderboard();
+    </script>
+</body>
+
+</html>
