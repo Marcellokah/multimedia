@@ -95,8 +95,8 @@
     <div id="next-row"></div>
     <div id="leaderboard"></div>
 
-    <audio id="bgm" loop autoplay src="assets/bgm.mp3"></audio>
     <audio id="clickSound" src="assets/clickSound.mp3"></audio>
+    <audio id="backgroundMusic" loop src="assets/backgroundMusic.mp3"></audio>
 
     <script>
         const game = document.getElementById('game');
@@ -106,6 +106,7 @@
         const leaderboardDisplay = document.getElementById('leaderboard');
         const nextRowDisplay = document.getElementById('next-row');
         const clickSound = document.getElementById('clickSound');
+        const backgroundMusic = document.getElementById('backgroundMusic');
 
         const colors = ['red', 'green', 'blue', 'yellow'];
         const rows = 10;
@@ -117,6 +118,17 @@
         let clicks = 3;
 
         const grid = [];
+
+        let playerName = '';
+
+        function askPlayerName() {
+            while (!playerName) {
+                playerName = prompt("Add meg a neved:");
+            }
+        }
+
+        askPlayerName();
+        backgroundMusic.play();
 
         function createGrid() {
             game.innerHTML = '';
@@ -165,6 +177,7 @@
             floodFill(row, col, color, toRemove);
 
             if (toRemove.length > 1) {
+                clickSound.currentTime = 0;
                 clickSound.play();
                 toRemove.forEach(el => {
                     el.classList.add('hidden');
@@ -256,6 +269,9 @@
                     const current = grid[r][c];
                     const below = grid[r + 1][c];
                     current.className = below.className;
+
+                    current.removeEventListener('click', onClick);
+                    current.addEventListener('click', onClick);
                 }
             }
 
@@ -263,6 +279,8 @@
                 const color = nextRowColors[c];
                 const block = grid[rows - 1][c];
                 block.className = `block ${color}`;
+                block.removeEventListener('click', onClick);
+                block.addEventListener('click', onClick);
             }
 
             activeRows++;
@@ -281,10 +299,8 @@
         }
 
         function saveScore() {
-            const name = prompt("Add meg a neved a toplistához:");
-            if (!name) return;
             const leaderboard = JSON.parse(localStorage.getItem('leaderboard') || '[]');
-            leaderboard.push({ name, score });
+            leaderboard.push({ name: playerName, score });
             leaderboard.sort((a, b) => b.score - a.score);
             localStorage.setItem('leaderboard', JSON.stringify(leaderboard.slice(0, 5)));
             showLeaderboard();
