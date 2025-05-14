@@ -1,4 +1,4 @@
-# 🎮 CrashDown[marcellokah.github.io/multimedia/]
+# 🎮 CrashDown
 
 CrashDown is a colorful grid-based puzzle game built with vanilla JavaScript, HTML, and CSS. Click on matching adjacent blocks to clear them, earn points, and survive as new rows crash down from the top.
 
