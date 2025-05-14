@@ -128,7 +128,6 @@
         }
 
         askPlayerName();
-        backgroundMusic.play();
 
         function createGrid() {
             game.innerHTML = '';
@@ -259,7 +258,7 @@
         function addRow() {
             if (activeRows >= rows) {
                 stopTimer();
-                alert("Játék vége! Elérted a maximális sorokat.");
+                alert("Játék vége! Elérted a maximális sort.");
                 saveScore();
                 return;
             }
@@ -313,6 +312,22 @@
         }
 
         window.addEventListener('beforeunload', stopTimer);
+
+        let musicPlaying = false;
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'm') {
+                if (musicPlaying) {
+                    backgroundMusic.pause();
+                    musicPlaying = false;
+                } else {
+                    backgroundMusic.play().catch(err => {
+                        console.warn('Background music could not start:', err);
+                    });
+                    musicPlaying = true;
+                }
+            }
+        }, { once: false });
 
         let nextRowColors = [];
 
