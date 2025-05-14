@@ -170,7 +170,7 @@ function centerColumns() {
 function addRow() {
     if (activeRows >= rows) {
         stopTimer();
-        alert('Játék vége! Elérted a maximális sort.');
+        alert("Játék vége! Elérted a maximális sort.");
         saveScore();
         return;
     }
